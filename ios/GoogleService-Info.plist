@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>231979402827-04b39g6obbiq6u2j0ee8tqhdulsme15l.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.231979402827-04b39g6obbiq6u2j0ee8tqhdulsme15l</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>231979402827-6mekvm2fpugc9vfgn8nabf8j9ksf8ata.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCI52NyVvUkL7gduSO37uBSFXTyeBPh-2s</string>
+	<key>GCM_SENDER_ID</key>
+	<string>231979402827</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.friendlyeats</string>
+	<key>PROJECT_ID</key>
+	<string>friendlyeats-a2418</string>
+	<key>STORAGE_BUCKET</key>
+	<string>friendlyeats-a2418.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:231979402827:ios:eb346abac7579a694b2fce</string>
+	<key>DATABASE_URL</key>
+	<string>https://friendlyeats-a2418.firebaseio.com</string>
+</dict>
+</plist>
