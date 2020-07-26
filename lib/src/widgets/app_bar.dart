@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../model/restaurant.dart';
@@ -53,10 +54,20 @@ class RestaurantAppBar extends StatelessWidget {
                 Container(
                   width: 80,
                   alignment: Alignment.bottomLeft,
-                  child: StarRating(
-                    rating: restaurant.avgRating,
-                    color: Colors.white,
-                    size: 16,
+                  // Instead of simply reading the value form the model,
+                  // listen for updates form the DocumentSnapshot.
+                  child: StreamBuilder<DocumentSnapshot>(
+                    stream: restaurant.reference.snapshots(),
+                    builder: (BuildContext context,
+                        AsyncSnapshot<DocumentSnapshot> snapshot) {
+                      return StarRating(
+                        rating: snapshot.hasData
+                            ? Restaurant.fromSnapshot(snapshot.data).avgRating
+                            : restaurant.avgRating,
+                        color: Colors.white,
+                        size: 16,
+                      );
+                    },
                   ),
                 ),
                 Padding(
