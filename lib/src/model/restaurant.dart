@@ -60,4 +60,14 @@ class Restaurant {
       photo: getRandomPhoto(),
     );
   }
+
+  Map<String, dynamic> toMap() => {
+        'avgRating': avgRating,
+        'category': category,
+        'city': city,
+        'name': name,
+        'numRatings': numRatings,
+        'photo': photo,
+        'price': price,
+      };
 }

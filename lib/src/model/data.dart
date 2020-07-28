@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 
 import './filter.dart';
 import './restaurant.dart';
@@ -22,15 +23,7 @@ import './review.dart';
 
 Future<void> addRestaurant(Restaurant restaurant) {
   final restaurants = Firestore.instance.collection('restaurants');
-  return restaurants.add({
-    'avgRating': restaurant.avgRating,
-    'category': restaurant.category,
-    'city': restaurant.city,
-    'name': restaurant.name,
-    'numRatings': restaurant.numRatings,
-    'photo': restaurant.photo,
-    'price': restaurant.price,
-  });
+  return restaurants.add(restaurant.toMap());
 }
 
 Stream<QuerySnapshot> loadAllRestaurants() {
@@ -103,7 +96,19 @@ Stream<QuerySnapshot> loadFilteredRestaurants(Filter filter) {
 }
 
 void addRestaurantsBatch(List<Restaurant> restaurants) {
+  var batch = Firestore.instance.batch();
+
+  final restaurantCollection = Firestore.instance.collection('restaurants');
   restaurants.forEach((Restaurant restaurant) {
-    addRestaurant(restaurant);
+    // addRestaurant(restaurant);
+    final restDoc = restaurantCollection.document();
+    batch.setData(restDoc, restaurant.toMap());
   });
+
+  batch
+      .commit()
+      .then((value) =>
+          debugPrint("Batch added ${restaurants.length} restaurants"))
+      .catchError((error) => debugPrint(
+          "Error when batch adding restaurants: ${error.toString()}"));
 }
