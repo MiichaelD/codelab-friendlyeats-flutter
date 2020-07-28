@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/rendering.dart';
 
 import './filter.dart';
 import './restaurant.dart';
