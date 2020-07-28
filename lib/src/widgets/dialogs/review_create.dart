@@ -28,7 +28,7 @@ class ReviewCreateDialog extends StatefulWidget {
 
   ReviewCreateDialog({this.user, Key key})
       : _userName = user?.displayName == null || user.displayName.isEmpty
-            ? user.email.isNotEmpty
+            ? user.email?.isNotEmpty
                 ? user.email
                 : 'Anonymous (${kIsWeb ? "Web" : "Mobile"})'
             : user.displayName,
