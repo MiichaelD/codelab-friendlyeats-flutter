@@ -19,15 +19,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sliver_fab/sliver_fab.dart';
 
-import 'widgets/empty_list.dart';
 import 'model/data.dart' as data;
 import 'model/restaurant.dart';
 import 'model/review.dart';
 import 'widgets/app_bar.dart';
-import 'widgets/review.dart';
 import 'widgets/dialogs/review_create.dart';
+import 'widgets/empty_list.dart';
+import 'widgets/review.dart';
 
 class RestaurantPage extends StatefulWidget {
   static const route = '/restaurant';
@@ -44,35 +45,92 @@ class RestaurantPage extends StatefulWidget {
 }
 
 class _RestaurantPageState extends State<RestaurantPage> {
-  _RestaurantPageState({@required String restaurantId}) {
-    FirebaseAuth.instance.signInAnonymously().then((AuthResult auth) {
-      data.getRestaurant(restaurantId).then((Restaurant restaurant) {
-        _currentReviewSubscription?.cancel();
-        setState(() {
-          if (auth.user.displayName == null || auth.user.displayName.isEmpty) {
-            _userName = 'Anonymous (${kIsWeb ? "Web" : "Mobile"})';
-          } else {
-            _userName = auth.user.displayName;
-          }
-          _restaurant = restaurant;
-          _userId = auth.user.uid;
+  final String restaurantId;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  FirebaseUser _firebaseUser;
 
-          // Initialize the reviews snapshot...
-          _currentReviewSubscription = _restaurant.reference
-              .collection('ratings')
-              .orderBy('timestamp', descending: true)
-              .snapshots()
-              .listen((QuerySnapshot reviewSnap) {
-            setState(() {
-              _isLoading = false;
-              _reviews = reviewSnap.documents.map((DocumentSnapshot doc) {
-                return Review.fromSnapshot(doc);
-              }).toList();
-            });
-          });
+  _RestaurantPageState({@required this.restaurantId}) {
+    data.getRestaurant(restaurantId).then((Restaurant restaurant) {
+      _currentReviewSubscription?.cancel();
+      _restaurant = restaurant;
+      // Initialize the reviews snapshot...
+      _currentReviewSubscription = _restaurant.reference
+          .collection('ratings')
+          .orderBy('timestamp', descending: true)
+          .snapshots()
+          .listen((QuerySnapshot reviewSnap) {
+        setState(() {
+          _isLoading = false;
+          _reviews = reviewSnap.documents.map((DocumentSnapshot doc) {
+            return Review.fromSnapshot(doc);
+          }).toList();
         });
       });
     });
+
+    FirebaseAuth.instance.currentUser().then((firebaseUser) async {
+      setState(() {
+        this._firebaseUser = firebaseUser;
+      });
+      if (firebaseUser == null) {
+        debugPrint('Signing anonymously.');
+        FirebaseAuth.instance
+            .signInAnonymously()
+            .then(_onAuthResult)
+            .catchError((error) =>
+                debugPrint('Error while anonymously signing in: $error'));
+      } else {
+        debugPrint('''
+          User already signed: 
+          ${_firebaseUser.displayName}(${_firebaseUser.uid})
+          ${_firebaseUser.isAnonymous ? '[anon]' : '${firebaseUser.email}'}''');
+
+        var isSignedIn = await _googleSignIn.isSignedIn();
+        if (isSignedIn || _googleSignIn.currentUser != null) {
+          debugPrint('''
+          User already signed in using Google credentials.: 
+          ${_googleSignIn.currentUser?.displayName}
+          (${_googleSignIn.currentUser?.id})
+          ${_googleSignIn.currentUser?.email}''');
+          return;
+        }
+        _googleSignIn.signIn().then((googleSignInAccount) async {
+          if (googleSignInAccount == null) {
+            debugPrint('User cancelled Google login');
+            return;
+          }
+          final googleSignInAuthentication =
+              await googleSignInAccount.authentication;
+          final credential = GoogleAuthProvider.getCredential(
+              accessToken: googleSignInAuthentication.accessToken,
+              idToken: googleSignInAuthentication.idToken);
+          // Note: Linking doesn't update current user's name.
+          firebaseUser
+              .linkWithCredential(credential)
+              .then((authResult) => _onAuthResult(authResult, credential))
+              .catchError((error) {
+            debugPrint('Error while linking Google credentials $error');
+
+            FirebaseAuth.instance
+                .signInWithCredential(credential)
+                .then((authResult) => _onAuthResult(authResult, credential))
+                .catchError((error) => debugPrint(
+                    'Error while singing in with Google credentials $error'));
+          });
+        }).catchError((error) {
+          debugPrint('Error while singing in with Google credentials $error');
+        });
+      }
+    });
+  }
+
+  void _onAuthResult(AuthResult auth, [AuthCredential credential]) {
+    debugPrint('''
+    OnAuthResult: currentUser: ${_firebaseUser.displayName}\
+    (${_firebaseUser.uid})${_firebaseUser.isAnonymous ? '[anon]' : ''}
+    newUser: ${auth.user.displayName}(${auth.user.uid})\
+    ${auth.user.isAnonymous ? '[anon]' : ''}''');
+    _firebaseUser = auth.user;
   }
 
   @override
@@ -85,16 +143,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
   StreamSubscription<QuerySnapshot> _currentReviewSubscription;
 
   Restaurant _restaurant;
-  String _userId;
-  String _userName;
   List<Review> _reviews = <Review>[];
 
   void _onCreateReviewPressed(BuildContext context) async {
     final newReview = await showDialog<Review>(
       context: context,
       builder: (_) => ReviewCreateDialog(
-        userId: _userId,
-        userName: _userName,
+        user: _firebaseUser,
       ),
     );
     if (newReview != null) {
@@ -113,8 +168,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
       await data.addReview(
         restaurantId: _restaurant.id,
         review: Review.random(
-          userId: _userId,
-          userName: _userName,
+          userId: _firebaseUser?.uid,
+          userName: _firebaseUser?.displayName,
         ),
       );
     }

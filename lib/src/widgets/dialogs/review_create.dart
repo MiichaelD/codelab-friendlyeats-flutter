@@ -14,16 +14,25 @@
 
 import 'dart:math' as math;
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:smooth_star_rating/smooth_star_rating.dart';
 
 import '../../model/review.dart';
 
 class ReviewCreateDialog extends StatefulWidget {
-  final String userName;
-  final String userId;
+  final FirebaseUser user;
+  final String _userName;
+  final String _userId;
 
-  ReviewCreateDialog({this.userName, this.userId, Key key});
+  ReviewCreateDialog({this.user, Key key})
+      : _userName = user?.displayName == null || user.displayName.isEmpty
+            ? user.email.isNotEmpty
+                ? user.email
+                : 'Anonymous (${kIsWeb ? "Web" : "Mobile"})'
+            : user.displayName,
+        _userId = user?.uid;
 
   @override
   _ReviewCreateDialogState createState() => _ReviewCreateDialogState();
@@ -37,7 +46,7 @@ class _ReviewCreateDialogState extends State<ReviewCreateDialog> {
   Widget build(BuildContext context) {
     Color color = rating == 0 ? Colors.grey : Colors.amber;
     return AlertDialog(
-      title: Text('Add a Review'),
+      title: Text('Add a Review as ${widget._userName}'),
       content: Container(
         width: math.min(MediaQuery.of(context).size.width, 740),
         height: math.min(MediaQuery.of(context).size.height, 180),
@@ -91,8 +100,8 @@ class _ReviewCreateDialogState extends State<ReviewCreateDialog> {
             Review.fromUserInput(
               rating: rating,
               text: review,
-              userId: widget.userId,
-              userName: widget.userName,
+              userId: widget._userId,
+              userName: widget._userName,
             ),
           ),
         ),

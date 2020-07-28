@@ -39,9 +39,23 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   _HomePageState() {
-    FirebaseAuth.instance.signInAnonymously().then((AuthResult auth) {
-      _currentSubscription =
-          data.loadAllRestaurants().listen(_updateRestaurants);
+    FirebaseAuth.instance.currentUser().then((firebaseUser) {
+      if (firebaseUser == null) {
+        FirebaseAuth.instance.signInAnonymously().then((AuthResult auth) {
+          debugPrint('''
+          Anonymously signed in: 
+          ${auth.user.displayName}(${auth.user.uid})
+          ${auth.user.isAnonymous ? '[anon]' : '${auth.user.email}'}''');
+          _currentSubscription =
+              data.loadAllRestaurants().listen(_updateRestaurants);
+        }).catchError((error) =>
+            debugPrint('Error while anonymously signing in: $error'));
+      } else {
+        debugPrint('''
+          User already signed: 
+          ${firebaseUser.displayName}(${firebaseUser.uid})
+          ${firebaseUser.isAnonymous ? '[anon]' : '${firebaseUser.email}'}''');
+      }
     });
   }
 
