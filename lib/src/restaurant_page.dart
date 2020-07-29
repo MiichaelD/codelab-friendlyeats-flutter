@@ -77,8 +77,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
             .then(_onAuthResult)
             .catchError((error) =>
                 debugPrint('Error while anonymously signing in: $error'));
-      } else {
-        _firebaseUser.reload();
       }
     });
   }
@@ -88,7 +86,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
     debugPrint('''
       OnAuthResult: currentUser: ${_firebaseUser.displayName}\
       (${_firebaseUser.uid})${_firebaseUser.isAnonymous ? '[anon]' : ''}''');
-    await auth.user.reload();
     _firebaseUser = auth.user;
     debugPrint('''
       newUser: ${auth.user.displayName}(${auth.user.uid})\
