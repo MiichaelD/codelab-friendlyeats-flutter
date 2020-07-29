@@ -69,9 +69,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     });
 
     FirebaseAuth.instance.currentUser().then((firebaseUser) async {
-      setState(() {
-        this._firebaseUser = firebaseUser;
-      });
+      this._firebaseUser = firebaseUser;
       if (firebaseUser == null) {
         debugPrint('Signing anonymously.');
         FirebaseAuth.instance
@@ -80,57 +78,24 @@ class _RestaurantPageState extends State<RestaurantPage> {
             .catchError((error) =>
                 debugPrint('Error while anonymously signing in: $error'));
       } else {
-        debugPrint('''
-          User already signed: 
-          ${_firebaseUser.displayName}(${_firebaseUser.uid})
-          ${_firebaseUser.isAnonymous ? '[anon]' : '${firebaseUser.email}'}''');
-
-        var isSignedIn = await _googleSignIn.isSignedIn();
-        if (isSignedIn || _googleSignIn.currentUser != null) {
-          debugPrint('''
-          User already signed in using Google credentials.: 
-          ${_googleSignIn.currentUser?.displayName}
-          (${_googleSignIn.currentUser?.id})
-          ${_googleSignIn.currentUser?.email}''');
-          return;
-        }
-        _googleSignIn.signIn().then((googleSignInAccount) async {
-          if (googleSignInAccount == null) {
-            debugPrint('User cancelled Google login');
-            return;
-          }
-          final googleSignInAuthentication =
-              await googleSignInAccount.authentication;
-          final credential = GoogleAuthProvider.getCredential(
-              accessToken: googleSignInAuthentication.accessToken,
-              idToken: googleSignInAuthentication.idToken);
-          // Note: Linking doesn't update current user's name.
-          firebaseUser
-              .linkWithCredential(credential)
-              .then((authResult) => _onAuthResult(authResult, credential))
-              .catchError((error) {
-            debugPrint('Error while linking Google credentials $error');
-
-            FirebaseAuth.instance
-                .signInWithCredential(credential)
-                .then((authResult) => _onAuthResult(authResult, credential))
-                .catchError((error) => debugPrint(
-                    'Error while singing in with Google credentials $error'));
-          });
-        }).catchError((error) {
-          debugPrint('Error while singing in with Google credentials $error');
-        });
+        _firebaseUser.reload();
       }
     });
   }
 
-  void _onAuthResult(AuthResult auth, [AuthCredential credential]) {
+  void _onAuthResult(AuthResult auth,
+      [AuthCredential credential, bool showReviewDialog]) async {
     debugPrint('''
-    OnAuthResult: currentUser: ${_firebaseUser.displayName}\
-    (${_firebaseUser.uid})${_firebaseUser.isAnonymous ? '[anon]' : ''}
-    newUser: ${auth.user.displayName}(${auth.user.uid})\
-    ${auth.user.isAnonymous ? '[anon]' : ''}''');
+      OnAuthResult: currentUser: ${_firebaseUser.displayName}\
+      (${_firebaseUser.uid})${_firebaseUser.isAnonymous ? '[anon]' : ''}''');
+    await auth.user.reload();
     _firebaseUser = auth.user;
+    debugPrint('''
+      newUser: ${auth.user.displayName}(${auth.user.uid})\
+      [${auth.user.isAnonymous ? 'anon' : auth.user.email}]''');
+    if (showReviewDialog) {
+      showAddReviewDialog();
+    }
   }
 
   @override
@@ -146,6 +111,54 @@ class _RestaurantPageState extends State<RestaurantPage> {
   List<Review> _reviews = <Review>[];
 
   void _onCreateReviewPressed(BuildContext context) async {
+    debugPrint('''
+        User signed: 
+        ${_firebaseUser.displayName}(${_firebaseUser.uid})
+        ${_firebaseUser.isAnonymous ? '[anon]' : '${_firebaseUser.email}'}''');
+
+    var isSignedIn = await _googleSignIn.isSignedIn();
+    if (isSignedIn || _googleSignIn.currentUser != null) {
+      debugPrint('''
+        User already signed in using Google credentials.: 
+        ${_googleSignIn.currentUser?.displayName}\
+        (${_googleSignIn.currentUser?.id})\
+        ${_googleSignIn.currentUser?.email}''');
+      showAddReviewDialog(); // As signed in user
+      return;
+    }
+    _googleSignIn.signIn().then((googleSignInAccount) async {
+      if (googleSignInAccount == null) {
+        debugPrint('User cancelled Google login');
+        showAddReviewDialog(); // As signed in user
+      } else {
+        final googleSignInAuthentication =
+            await googleSignInAccount.authentication;
+        final credential = GoogleAuthProvider.getCredential(
+            accessToken: googleSignInAuthentication.accessToken,
+            idToken: googleSignInAuthentication.idToken);
+        // Note: Linking doesn't update current user's name.
+//        _firebaseUser
+//            .linkWithCredential(credential)
+//            .then((authResult) => _onAuthResult(authResult, credential, true))
+//            .catchError((error) {
+//          debugPrint('Error while linking Google credentials $error');
+
+        FirebaseAuth.instance
+            .signInWithCredential(credential)
+            .then((authResult) => _onAuthResult(authResult, credential, true))
+            .catchError((error) {
+          debugPrint('Error while singing in with Google credentials $error');
+          showAddReviewDialog(); // As anonymous user
+        });
+//        });
+      }
+    }).catchError((error) {
+      debugPrint('Error while singing in with Google credentials2 $error');
+      showAddReviewDialog(); // As anonymous user
+    });
+  }
+
+  void showAddReviewDialog() async {
     final newReview = await showDialog<Review>(
       context: context,
       builder: (_) => ReviewCreateDialog(
@@ -169,7 +182,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
         restaurantId: _restaurant.id,
         review: Review.random(
           userId: _firebaseUser?.uid,
-          userName: _firebaseUser?.displayName,
+          userName: _firebaseUser?.displayName == null
+              ? 'Anonymous (${kIsWeb ? "Web" : "Mobile"})'
+              : _firebaseUser.displayName,
         ),
       );
     }

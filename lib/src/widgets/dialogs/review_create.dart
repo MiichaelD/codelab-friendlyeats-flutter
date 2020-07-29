@@ -27,11 +27,11 @@ class ReviewCreateDialog extends StatefulWidget {
   final String _userId;
 
   ReviewCreateDialog({this.user, Key key})
-      : _userName = user?.displayName == null || user.displayName.isEmpty
-            ? user.email?.isNotEmpty
-                ? user.email
+      : _userName = (user?.displayName == null || user?.displayName.isEmpty)
+            ? user?.email != null && user.email.isNotEmpty
+                ? user?.email
                 : 'Anonymous (${kIsWeb ? "Web" : "Mobile"})'
-            : user.displayName,
+            : user?.displayName,
         _userId = user?.uid;
 
   @override
